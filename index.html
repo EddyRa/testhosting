@@ -1,317 +1,401 @@
 <!DOCTYPE html>
-<html lang="nl">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cypher X security AI</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <title>Thinknology Image Restoration</title>
     <style>
-        body,
-        html {
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --background-color: #ecf0f1;
+            --text-color: #34495e;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
             margin: 0;
             padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #121212;
-            color: #FFFFFF;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
         .header {
-            background-color: #897e7e6e;
-            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
             text-align: center;
+            padding: 40px 20px;
             position: relative;
+            overflow: hidden;
         }
 
         .header h1 {
+            font-size: 36px;
+            font-weight: 700;
             margin: 0;
-            font-size: 2em;
-            color: #BB86FC;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
         }
 
-        .eye-animation {
+        .header-bg {
             position: absolute;
-            top: 50%;
-            left: 20px;
-            transform: translateY(-50%);
-            width: 60px;
-            height: 30px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
         }
 
         .content {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .video-container {
             display: flex;
             justify-content: space-between;
-            width: 100%;
-            max-width: 1280px;
+            margin-top: 40px;
         }
 
-        .video-wrapper {
-            position: relative;
-            width: 48%;
+        .upload-section {
+            flex: 1;
+            margin-right: 40px;
         }
 
-        #webcam,
-        #webcam2,
-        #canvas,
-        #canvas2 {
-            width: 100%;
-            border-radius: 8px;
+        .preview-section {
+            flex: 1;
         }
 
-        #canvas,
-        #canvas2 {
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-
-        .controls {
-            margin-top: 20px;
-        }
-
-        button {
-            background-color: #BB86FC;
-            color: #121212;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+        .upload-area {
+            background-color: white;
+            border: 2px dashed var(--secondary-color);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
             cursor: pointer;
-            font-size: 1em;
-            margin: 0 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        button:disabled {
-            background-color: #6E6E6E;
-            cursor: not-allowed;
+        .upload-area:hover {
+            background-color: #f8f8f8;
+            transform: scale(1.02);
         }
 
-        #logContainer {
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
             margin-top: 20px;
+        }
+
+        .button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .button:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 1;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+
+        .preview-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
             width: 100%;
-            max-width: 1280px;
-            background-color: #1E1E1E;
-            border-radius: 8px;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: var(--secondary-color);
+            transition: width 0.3s ease;
+        }
+
+        .compare-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .compare-image {
+            width: 48%;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-animation {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes checkmark {
+            0% {
+                stroke-dashoffset: 100;
+            }
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .checkmark {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: checkmark 1s ease-in-out forwards;
         }
     </style>
 </head>
-
 <body>
     <div class="header">
-
-        <!-- <h1>Cypher X security AI</h1> -->
-        <img src="cypheralpha.png" height="500" width="900" alt="">
-        <svg class="eye-animation" viewBox="0 0 65 30">
-            <ellipse cx="30" cy="15" rx="30" ry="15" fill="white" />
-            <circle cx="30" cy="15" r="10" fill="#121212">
-                <animateTransform attributeName="transform" type="translate" values="-7,0; 7,0; -7,0" dur="3s"
-                    repeatCount="indefinite" />
-            </circle>
-            <ellipse cx="30" cy="15" rx="30" ry="15" fill="transparent" stroke="#BB86FC" stroke-width="2" />
+        <svg class="header-bg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#grid)" />
         </svg>
+        <h1>Thinknology Image Restoration</h1>
     </div>
-    <div class="content">
-        <div class="video-container">
-            <div class="video-wrapper">
-                <video id="webcam" autoplay playsinline></video>
-                <canvas id="canvas"></canvas>
+    <div class="container">
+        <div class="content">
+            <div class="upload-section">
+                <div class="upload-area" id="upload-area">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15V3" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p class="upload-text">Drag and drop your image here or click to upload</p>
+                </div>
+                <input type="file" id="file-input" accept="image/*">
+                <button class="button" id="restore-button">Restore Image</button>
+                <div class="loading">
+                    <svg class="loading-spinner" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke="#3498db" stroke-width="5">
+                            <animate attributeName="stroke-dasharray" from="0 126" to="126 126" dur="1.5s" repeatCount="indefinite" />
+                            <animate attributeName="stroke-dashoffset" from="0" to="-126" dur="1.5s" repeatCount="indefinite" />
+                        </circle>
+                    </svg>
+                    <p>Restoring image...</p>
+                    <div class="progress-bar">
+                        <div class="progress" id="progress"></div>
+                    </div>
+                </div>
+                <svg class="success-animation" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#4CAF50" stroke-width="8" />
+                    <path class="checkmark" d="M25 50 L40 65 L75 30" fill="none" stroke="#4CAF50" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
             </div>
-            <div class="video-wrapper">
-                <video id="webcam2" autoplay playsinline></video>
-                <canvas id="canvas2"></canvas>
+            <div class="preview-section">
+                <div class="preview-container">
+                    <img id="preview-image" class="preview-image" alt="Preview" />
+                </div>
+                <div class="preview-container">
+                    <img id="restored-image" class="preview-image" alt="Restored" />
+                </div>
+                <div class="compare-container">
+                    <img id="compare-original" class="compare-image" alt="Original" />
+                    <img id="compare-restored" class="compare-image" alt="Restored" />
+                </div>
             </div>
         </div>
-        <div class="controls">
-            <button id="startBtn">Start Detectie</button>
-            <button id="stopBtn" disabled>Stop Detectie</button>
-            <button id="downloadBtn" disabled>Download Log</button>
-        </div>
-        <div id="logContainer"></div>
     </div>
 
     <script>
-        const video = document.getElementById('webcam');
-        const video2 = document.getElementById('webcam2');
-        const canvas = document.getElementById('canvas');
-        const canvas2 = document.getElementById('canvas2');
-        const ctx = canvas.getContext('2d');
-        const ctx2 = canvas2.getContext('2d');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const logContainer = document.getElementById('logContainer');
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const restoreButton = document.getElementById('restore-button');
+        const previewImage = document.getElementById('preview-image');
+        const restoredImage = document.getElementById('restored-image');
+        const compareOriginal = document.getElementById('compare-original');
+        const compareRestored = document.getElementById('compare-restored');
+        const loadingDiv = document.querySelector('.loading');
+        const progressBar = document.getElementById('progress');
+        const successAnimation = document.querySelector('.success-animation');
 
-        let poseDetector, objectDetector;
-        let isDetecting = false;
-        let detectionLog = [];
+        let originalImageData;
 
-        const keypointTranslations = {
-            nose: 'neus', left_eye: 'linkeroog', right_eye: 'rechteroog', left_ear: 'linkeroor', right_ear: 'rechteroor',
-            left_shoulder: 'linkerschouder', right_shoulder: 'rechterschouder', left_elbow: 'linkerelleboog',
-            right_elbow: 'rechterelleboog', left_wrist: 'linkerhand', right_wrist: 'rechterhand', left_hip: 'linkerheup',
-            right_hip: 'rechterheup', left_knee: 'linkerknie', right_knee: 'rechterknie', left_ankle: 'linkerenkel',
-            right_ankle: 'rechterenkel'
-        };
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f0f0f0';
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = 'white';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = 'white';
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
 
-        const objectTranslations = {
-            person: 'persoon', bicycle: 'fiets', car: 'auto', motorcycle: 'motorfiets', airplane: 'vliegtuig',
-            bus: 'bus', train: 'trein', truck: 'vrachtwagen', boat: 'boot', 'traffic light': 'verkeerslicht',
-            'fire hydrant': 'brandkraan', 'stop sign': 'stopbord', 'parking meter': 'parkeermeter', bench: 'bank',
-            bird: 'vogel', cat: 'kat', dog: 'hond', horse: 'paard', sheep: 'schaap', cow: 'koe',
-            elephant: 'olifant', bear: 'beer', zebra: 'zebra', giraffe: 'giraffe', backpack: 'rugzak',
-            umbrella: 'paraplu', handbag: 'handtas', tie: 'stropdas', suitcase: 'koffer', frisbee: 'frisbee',
-            skis: 'ski\'s', snowboard: 'snowboard', 'sports ball': 'sportbal', kite: 'vlieger',
-            'baseball bat': 'honkbalknuppel', 'baseball glove': 'honkbalhandschoen', skateboard: 'skateboard',
-            surfboard: 'surfplank', 'tennis racket': 'tennisracket', bottle: 'fles', 'wine glass': 'wijnglas',
-            cup: 'kopje', fork: 'vork', knife: 'mes', spoon: 'lepel', bowl: 'kom', banana: 'banaan',
-            apple: 'appel', sandwich: 'boterham', orange: 'sinaasappel', broccoli: 'broccoli', carrot: 'wortel',
-            'hot dog': 'hotdog', pizza: 'pizza', donut: 'donut', cake: 'taart', chair: 'stoel', couch: 'bank',
-            'potted plant': 'kamerplant', bed: 'bed', 'dining table': 'eettafel', toilet: 'toilet', tv: 'tv',
-            laptop: 'laptop', mouse: 'muis', remote: 'afstandsbediening', keyboard: 'toetsenbord',
-            'cell phone': 'mobiele telefoon', microwave: 'magnetron', oven: 'oven', toaster: 'broodrooster',
-            sink: 'gootsteen', refrigerator: 'koelkast', book: 'boek', clock: 'klok', vase: 'vaas',
-            scissors: 'schaar', 'teddy bear': 'teddybeer', 'hair drier': 'föhn', toothbrush: 'tandenborstel'
-        };
-
-        const dangerousObjects = ['mes', 'schaar', 'vuurwapen']; // Voeg hier meer gevaarlijke objecten toe
-
-        async function setupCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            video2.srcObject = stream;
-            return new Promise((resolve) => {
-                video.onloadedmetadata = () => {
-                    video.play();
-                    video2.play();
-                    resolve(video);
-                };
-            });
+        function handleFile(file) {
+            uploadArea.querySelector('p').textContent = `File selected: ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImageData = e.target.result;
+                previewImage.src = originalImageData;
+                previewImage.style.display = 'block';
+                compareOriginal.src = originalImageData;
+                compareOriginal.style.display = 'block';
+                restoredImage.style.display = 'none';
+                compareRestored.style.display = 'none';
+                successAnimation.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
         }
 
-        async function loadModels() {
-            const poseModel = poseDetection.SupportedModels.MoveNet;
-            const poseConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
-            poseDetector = await poseDetection.createDetector(poseModel, poseConfig);
-            objectDetector = await cocoSsd.load();
-        }
+        restoreButton.addEventListener('click', async () => {
+            if (!originalImageData) {
+                alert('Please select an image first.');
+                return;
+            }
+            loadingDiv.style.display = 'block';
+            restoreButton.disabled = true;
+            progressBar.style.width = '0%';
+            
+            try {
+                const restoredImageUrl = await restoreImage(originalImageData);
+                restoredImage.src = restoredImageUrl;
+                restoredImage.style.display = 'block';
+                compareRestored.src = restoredImageUrl;
+                compareRestored.style.display = 'block';
+                successAnimation.style.display = 'block';
+            } catch (error) {
+                console.error('Error restoring image:', error);
+                alert('An error occurred while restoring the image. Please try again.');
+            } finally {
+                loadingDiv.style.display = 'none';
+                restoreButton.disabled = false;
+            }
+        });
 
-        function drawKeypoints(keypoints) {
-            ctx.font = '16px Arial';
-            ctx.fillStyle = 'white';
-            keypoints.forEach(({ x, y, score, name }) => {
-                if (score > 0.3) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                    ctx.fillStyle = 'aqua';
-                    ctx.fill();
-                    ctx.fillStyle = 'white';
-                    ctx.fillText(keypointTranslations[name] || name, x, y - 5);
-                }
-            });
-        }
+        async function restoreImage(imageData) {
+            const API_URL = "https://api.replicate.com/v1/predictions";
+            const API_TOKEN = "YOUR_REPLICATE_API_TOKEN"; // Replace with your actual token
 
-        function drawBoundingBox(prediction) {
-            const [x, y, width, height] = prediction.bbox;
-            const translatedClass = objectTranslations[prediction.class] || prediction.class;
-            ctx2.strokeStyle = '#BB86FC';
-            ctx2.lineWidth = 2;
-            ctx2.strokeRect(x, y, width, height);
-            ctx2.font = '16px Arial';
-            ctx2.fillStyle = 'white';
-            ctx2.fillText(`${translatedClass}: ${Math.round(prediction.score * 100)}%`, x, y > 20 ? y - 5 : 20);
-        }
-
-        function isDangerous(object) {
-            return dangerousObjects.includes(object);
-        }
-
-        async function detectPoseAndObject() {
-            if (!isDetecting) return;
-
-            const poses = await poseDetector.estimatePoses(video);
-            const objects = await objectDetector.detect(video2);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
-
-            poses.forEach(pose => drawKeypoints(pose.keypoints));
-            objects.forEach(drawBoundingBox);
-
-            const timestamp = new Date().toLocaleString();
-
-            // Log pose detection
-            const poseLogEntry = `${timestamp},Lichaamshouding,${poses.length} personen gedetecteerd,Geen gevaar`;
-            detectionLog.push(poseLogEntry);
-
-            // Log object detections
-            objects.forEach(obj => {
-                const translatedClass = objectTranslations[obj.class] || obj.class;
-                const danger = isDangerous(translatedClass) ? 'Gevaar' : 'Geen gevaar';
-                const objectLogEntry = `${timestamp},Object gedetecteerd,${translatedClass},${danger}`;
-                detectionLog.push(objectLogEntry);
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Token ${API_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    version: "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
+                    input: { image: imageData.split(',')[1] }
+                }),
             });
 
-            // Display last 5 log entries
-            logContainer.innerHTML = detectionLog.slice(-5).join('<br>');
-
-            requestAnimationFrame(detectPoseAndObject);
-        }
-
-        startBtn.onclick = () => {
-            isDetecting = true;
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            downloadBtn.disabled = true;
-            detectPoseAndObject();
-        };
-
-        stopBtn.onclick = () => {
-            isDetecting = false;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            downloadBtn.disabled = false;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
-        };
-
-        downloadBtn.onclick = () => {
-            const header = "Tijd,Type Detectie,Gedetecteerd Object/Pose,Gevaar\n";
-            const csvContent = header + detectionLog.join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'detectie_log.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        };
-
-        async function init() {
-            await setupCamera();
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas2.width = video2.videoWidth;
-            canvas2.height = video2.videoHeight;
-            await loadModels();
-            startBtn.disabled = false;
-        }
-
-        init();
-    </script>
-</body>
-
-</html>
+            if (!response.ok) {
+                
