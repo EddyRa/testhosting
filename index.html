@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cypher X security AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #121212;
+            color: #FFFFFF;
+        }
+
+        .header {
+            background-color: #897e7e6e;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            color: #BB86FC;
+        }
+
+        .eye-animation {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 30px;
+        }
+
+        .content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .video-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1280px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 48%;
+        }
+
+        #webcam,
+        #webcam2,
+        #canvas,
+        #canvas2 {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        #canvas,
+        #canvas2 {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #BB86FC;
+            color: #121212;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 0 10px;
+        }
+
+        button:disabled {
+            background-color: #6E6E6E;
+            cursor: not-allowed;
+        }
+
+        #logContainer {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1280px;
+            background-color: #1E1E1E;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+
+        <!-- <h1>Cypher X security AI</h1> -->
+        <img src="cypheralpha.png" height="500" width="900" alt="">
+        <svg class="eye-animation" viewBox="0 0 65 30">
+            <ellipse cx="30" cy="15" rx="30" ry="15" fill="white" />
+            <circle cx="30" cy="15" r="10" fill="#121212">
+                <animateTransform attributeName="transform" type="translate" values="-7,0; 7,0; -7,0" dur="3s"
+                    repeatCount="indefinite" />
+            </circle>
+            <ellipse cx="30" cy="15" rx="30" ry="15" fill="transparent" stroke="#BB86FC" stroke-width="2" />
+        </svg>
+    </div>
+    <div class="content">
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="video-wrapper">
+                <video id="webcam2" autoplay playsinline></video>
+                <canvas id="canvas2"></canvas>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="startBtn">Start Detectie</button>
+            <button id="stopBtn" disabled>Stop Detectie</button>
+            <button id="downloadBtn" disabled>Download Log</button>
+        </div>
+        <div id="logContainer"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const video2 = document.getElementById('webcam2');
+        const canvas = document.getElementById('canvas');
+        const canvas2 = document.getElementById('canvas2');
+        const ctx = canvas.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const logContainer = document.getElementById('logContainer');
+
+        let poseDetector, objectDetector;
+        let isDetecting = false;
+        let detectionLog = [];
+
+        const keypointTranslations = {
+            nose: 'neus', left_eye: 'linkeroog', right_eye: 'rechteroog', left_ear: 'linkeroor', right_ear: 'rechteroor',
+            left_shoulder: 'linkerschouder', right_shoulder: 'rechterschouder', left_elbow: 'linkerelleboog',
+            right_elbow: 'rechterelleboog', left_wrist: 'linkerhand', right_wrist: 'rechterhand', left_hip: 'linkerheup',
+            right_hip: 'rechterheup', left_knee: 'linkerknie', right_knee: 'rechterknie', left_ankle: 'linkerenkel',
+            right_ankle: 'rechterenkel'
+        };
+
+        const objectTranslations = {
+            person: 'persoon', bicycle: 'fiets', car: 'auto', motorcycle: 'motorfiets', airplane: 'vliegtuig',
+            bus: 'bus', train: 'trein', truck: 'vrachtwagen', boat: 'boot', 'traffic light': 'verkeerslicht',
+            'fire hydrant': 'brandkraan', 'stop sign': 'stopbord', 'parking meter': 'parkeermeter', bench: 'bank',
+            bird: 'vogel', cat: 'kat', dog: 'hond', horse: 'paard', sheep: 'schaap', cow: 'koe',
+            elephant: 'olifant', bear: 'beer', zebra: 'zebra', giraffe: 'giraffe', backpack: 'rugzak',
+            umbrella: 'paraplu', handbag: 'handtas', tie: 'stropdas', suitcase: 'koffer', frisbee: 'frisbee',
+            skis: 'ski\'s', snowboard: 'snowboard', 'sports ball': 'sportbal', kite: 'vlieger',
+            'baseball bat': 'honkbalknuppel', 'baseball glove': 'honkbalhandschoen', skateboard: 'skateboard',
+            surfboard: 'surfplank', 'tennis racket': 'tennisracket', bottle: 'fles', 'wine glass': 'wijnglas',
+            cup: 'kopje', fork: 'vork', knife: 'mes', spoon: 'lepel', bowl: 'kom', banana: 'banaan',
+            apple: 'appel', sandwich: 'boterham', orange: 'sinaasappel', broccoli: 'broccoli', carrot: 'wortel',
+            'hot dog': 'hotdog', pizza: 'pizza', donut: 'donut', cake: 'taart', chair: 'stoel', couch: 'bank',
+            'potted plant': 'kamerplant', bed: 'bed', 'dining table': 'eettafel', toilet: 'toilet', tv: 'tv',
+            laptop: 'laptop', mouse: 'muis', remote: 'afstandsbediening', keyboard: 'toetsenbord',
+            'cell phone': 'mobiele telefoon', microwave: 'magnetron', oven: 'oven', toaster: 'broodrooster',
+            sink: 'gootsteen', refrigerator: 'koelkast', book: 'boek', clock: 'klok', vase: 'vaas',
+            scissors: 'schaar', 'teddy bear': 'teddybeer', 'hair drier': 'föhn', toothbrush: 'tandenborstel'
+        };
+
+        const dangerousObjects = ['mes', 'schaar', 'vuurwapen']; // Voeg hier meer gevaarlijke objecten toe
+
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video2.srcObject = stream;
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    video2.play();
+                    resolve(video);
+                };
+            });
+        }
+
+        async function loadModels() {
+            const poseModel = poseDetection.SupportedModels.MoveNet;
+            const poseConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
+            poseDetector = await poseDetection.createDetector(poseModel, poseConfig);
+            objectDetector = await cocoSsd.load();
+        }
+
+        function drawKeypoints(keypoints) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = 'white';
+            keypoints.forEach(({ x, y, score, name }) => {
+                if (score > 0.3) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'aqua';
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(keypointTranslations[name] || name, x, y - 5);
+                }
+            });
+        }
+
+        function drawBoundingBox(prediction) {
+            const [x, y, width, height] = prediction.bbox;
+            const translatedClass = objectTranslations[prediction.class] || prediction.class;
+            ctx2.strokeStyle = '#BB86FC';
+            ctx2.lineWidth = 2;
+            ctx2.strokeRect(x, y, width, height);
+            ctx2.font = '16px Arial';
+            ctx2.fillStyle = 'white';
+            ctx2.fillText(`${translatedClass}: ${Math.round(prediction.score * 100)}%`, x, y > 20 ? y - 5 : 20);
+        }
+
+        function isDangerous(object) {
+            return dangerousObjects.includes(object);
+        }
+
+        async function detectPoseAndObject() {
+            if (!isDetecting) return;
+
+            const poses = await poseDetector.estimatePoses(video);
+            const objects = await objectDetector.detect(video2);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+
+            poses.forEach(pose => drawKeypoints(pose.keypoints));
+            objects.forEach(drawBoundingBox);
+
+            const timestamp = new Date().toLocaleString();
+
+            // Log pose detection
+            const poseLogEntry = `${timestamp},Lichaamshouding,${poses.length} personen gedetecteerd,Geen gevaar`;
+            detectionLog.push(poseLogEntry);
+
+            // Log object detections
+            objects.forEach(obj => {
+                const translatedClass = objectTranslations[obj.class] || obj.class;
+                const danger = isDangerous(translatedClass) ? 'Gevaar' : 'Geen gevaar';
+                const objectLogEntry = `${timestamp},Object gedetecteerd,${translatedClass},${danger}`;
+                detectionLog.push(objectLogEntry);
+            });
+
+            // Display last 5 log entries
+            logContainer.innerHTML = detectionLog.slice(-5).join('<br>');
+
+            requestAnimationFrame(detectPoseAndObject);
+        }
+
+        startBtn.onclick = () => {
+            isDetecting = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            downloadBtn.disabled = true;
+            detectPoseAndObject();
+        };
+
+        stopBtn.onclick = () => {
+            isDetecting = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            downloadBtn.disabled = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+        };
+
+        downloadBtn.onclick = () => {
+            const header = "Tijd,Type Detectie,Gedetecteerd Object/Pose,Gevaar\n";
+            const csvContent = header + detectionLog.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'detectie_log.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        async function init() {
+            await setupCamera();
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas2.width = video2.videoWidth;
+            canvas2.height = video2.videoHeight;
+            await loadModels();
+            startBtn.disabled = false;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
