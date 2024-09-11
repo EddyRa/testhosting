@@ -59,17 +59,15 @@
 
         .content {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: center;
             margin-top: 40px;
         }
 
         .upload-section {
-            flex: 1;
-            margin-right: 40px;
-        }
-
-        .preview-section {
-            flex: 1;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 40px;
         }
 
         .upload-area {
@@ -151,21 +149,20 @@
         }
 
         @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 1;
-            }
-            20% {
-                transform: scale(25, 25);
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: scale(40, 40);
-            }
+            0% { transform: scale(0, 0); opacity: 1; }
+            20% { transform: scale(25, 25); opacity: 1; }
+            100% { opacity: 0; transform: scale(40, 40); }
+        }
+
+        .preview-section {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
         }
 
         .preview-container {
+            width: 48%;
             background-color: white;
             border-radius: 10px;
             padding: 20px;
@@ -213,18 +210,6 @@
             transition: width 0.3s ease;
         }
 
-        .compare-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-        }
-
-        .compare-image {
-            width: 48%;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
         .success-animation {
             width: 100px;
             height: 100px;
@@ -233,18 +218,20 @@
         }
 
         @keyframes checkmark {
-            0% {
-                stroke-dashoffset: 100;
-            }
-            100% {
-                stroke-dashoffset: 0;
-            }
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
         }
 
         .checkmark {
             stroke-dasharray: 100;
             stroke-dashoffset: 100;
             animation: checkmark 1s ease-in-out forwards;
+        }
+
+        .error-message {
+            color: var(--accent-color);
+            margin-top: 10px;
+            display: none;
         }
     </style>
 </head>
@@ -289,17 +276,14 @@
                     <circle cx="50" cy="50" r="45" fill="none" stroke="#4CAF50" stroke-width="8" />
                     <path class="checkmark" d="M25 50 L40 65 L75 30" fill="none" stroke="#4CAF50" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
+                <p id="error-message" class="error-message"></p>
             </div>
             <div class="preview-section">
                 <div class="preview-container">
-                    <img id="preview-image" class="preview-image" alt="Preview" />
+                    <img id="preview-image" class="preview-image" alt="Original" />
                 </div>
                 <div class="preview-container">
                     <img id="restored-image" class="preview-image" alt="Restored" />
-                </div>
-                <div class="compare-container">
-                    <img id="compare-original" class="compare-image" alt="Original" />
-                    <img id="compare-restored" class="compare-image" alt="Restored" />
                 </div>
             </div>
         </div>
@@ -311,13 +295,12 @@
         const restoreButton = document.getElementById('restore-button');
         const previewImage = document.getElementById('preview-image');
         const restoredImage = document.getElementById('restored-image');
-        const compareOriginal = document.getElementById('compare-original');
-        const compareRestored = document.getElementById('compare-restored');
         const loadingDiv = document.querySelector('.loading');
         const progressBar = document.getElementById('progress');
         const successAnimation = document.querySelector('.success-animation');
+        const errorMessage = document.getElementById('error-message');
 
-        let originalImageData;
+        let selectedFile;
 
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => {
@@ -341,61 +324,66 @@
         });
 
         function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload an image file.');
+                return;
+            }
+            selectedFile = file;
             uploadArea.querySelector('p').textContent = `File selected: ${file.name}`;
             const reader = new FileReader();
             reader.onload = (e) => {
-                originalImageData = e.target.result;
-                previewImage.src = originalImageData;
+                previewImage.src = e.target.result;
                 previewImage.style.display = 'block';
-                compareOriginal.src = originalImageData;
-                compareOriginal.style.display = 'block';
                 restoredImage.style.display = 'none';
-                compareRestored.style.display = 'none';
                 successAnimation.style.display = 'none';
             };
             reader.readAsDataURL(file);
         }
 
         restoreButton.addEventListener('click', async () => {
-            if (!originalImageData) {
-                alert('Please select an image first.');
+            if (!selectedFile) {
+                showError('Please select an image first.');
                 return;
             }
             loadingDiv.style.display = 'block';
             restoreButton.disabled = true;
             progressBar.style.width = '0%';
+            errorMessage.style.display = 'none';
             
             try {
-                const restoredImageUrl = await restoreImage(originalImageData);
-                restoredImage.src = restoredImageUrl;
+                await simulateImageRestoration();
+                // In a real scenario, you would send the image to a server for processing
+                // and receive the restored image back. For this demo, we'll just use the
+                // original image to simulate the restoration.
+                restoredImage.src = previewImage.src;
                 restoredImage.style.display = 'block';
-                compareRestored.src = restoredImageUrl;
-                compareRestored.style.display = 'block';
                 successAnimation.style.display = 'block';
             } catch (error) {
                 console.error('Error restoring image:', error);
-                alert('An error occurred while restoring the image. Please try again.');
+                showError('An error occurred while restoring the image. Please try again.');
             } finally {
                 loadingDiv.style.display = 'none';
                 restoreButton.disabled = false;
             }
         });
 
-        async function restoreImage(imageData) {
-            const API_URL = "https://api.replicate.com/v1/predictions";
-            const API_TOKEN = "YOUR_REPLICATE_API_TOKEN"; // Replace with your actual token
+        async function simulateImageRestoration() {
+            const totalSteps = 10;
+            for (let step = 1; step <= totalSteps; step++) {
+                await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+                updateProgress(step / totalSteps);
+            }
+        }
 
-            const response = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Token ${API_TOKEN}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    version: "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-                    input: { image: imageData.split(',')[1] }
-                }),
-            });
+        function updateProgress(progress) {
+            const percentage = Math.round(progress * 100);
+            progressBar.style.width = `${percentage}%`;
+        }
 
-            if (!response.ok) {
-                
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
